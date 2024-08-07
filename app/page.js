@@ -1,4 +1,4 @@
-'use client' // client side
+'use client'
 
 import { useState, useEffect } from 'react'
 import { Box, Stack, Typography, Button, Modal, TextField } from '@mui/material'
@@ -28,8 +28,65 @@ const style = {
   gap: 3,
 }
 
+
+
 export default function Home() {
-  // We'll add our component logic here
+  // state variables
+  const [inventory, setInventory] = useState([])
+  const [open, setOpen] = useState(false)
+  const [itemName, setItemName] = useState('')
+
+  // Modal control functions
+  // Manages the modal state
+  const handleOpen = () => setOpen(true)
+  const handleClose = () => setOpen(false)
+
+
+  // inventory fetching from Firestore
+  const updateInventory = async () => {
+    const snapshot = query(collection(firestore, 'inventory'))
+    const docs = await getDocs(snapshot)
+    const inventoryList = []
+    docs.forEach((doc) => {
+      inventoryList.push({ name: doc.id, ...doc.data() })
+    })
+    setInventory(inventoryList)
+  }
+
+  useEffect(() => {
+    updateInventory()
+  }, [])
+
+
+  // Function Handling for adding and removing item
+  // These functions will interact with firestore to add or remove items and update
+  const addItem = async (item) => {
+    const docRef = doc(collection(firestore, 'inventory'), item)
+    const docSnap = await getDoc(docRef)
+    if (docSnap.exists()) {
+      const { quantity } = docSnap.data()
+      await setDoc(docRef, { quantity: quantity + 1 })
+    } else {
+      await setDoc(docRef, { quantity: 1 })
+    }
+    await updateInventory()
+  }
+  
+  const removeItem = async (item) => {
+    const docRef = doc(collection(firestore, 'inventory'), item)
+    const docSnap = await getDoc(docRef)
+    if (docSnap.exists()) {
+      const { quantity } = docSnap.data()
+      if (quantity === 1) {
+        await deleteDoc(docRef)
+      } else {
+        await setDoc(docRef, { quantity: quantity - 1 })
+      }
+    }
+    await updateInventory()
+  }
+  
+  
   return (
     <Box>
       <Typography variant="h1">Inventory Management</Typography>
